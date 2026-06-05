@@ -1,0 +1,3 @@
+com\platform\user\model\User.class
+com\platform\user\UserServiceApplication.class
+com\platform\user\controller\UserController.class

@@ -1,0 +1,3 @@
+com\platform\payment\PaymentServiceApplication.class
+com\platform\payment\controller\PaymentController.class
+com\platform\payment\model\Payment.class

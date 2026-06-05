@@ -1,0 +1,49 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+        # ---------------------------------------------------------------
+        # USER-SERVICE
+        # "http://user-service" is resolved by Kubernetes CoreDNS to the
+        # ClusterIP of the "user-service" Service object in the same
+        # namespace. kube-proxy then load-balances across all running pods.
+        # ---------------------------------------------------------------
+        - id: user-service-route
+          uri: http://user-service
+          predicates:
+            - Path=/users/**
+
+        # ---------------------------------------------------------------
+        # ORDER-SERVICE
+        # ---------------------------------------------------------------
+        - id: order-service-route
+          uri: http://order-service
+          predicates:
+            - Path=/orders/**
+
+        # ---------------------------------------------------------------
+        # PAYMENT-SERVICE
+        # ---------------------------------------------------------------
+        - id: payment-service-route
+          uri: http://payment-service
+          predicates:
+            - Path=/payments/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO

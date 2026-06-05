@@ -1,0 +1,73 @@
+# ============================================================================
+# API Gateway — Kubernetes Deployment + Service
+#
+# The gateway is the only component exposed outside the cluster, via
+# NodePort (port 30080). In production you would front this with an
+# Ingress or a cloud LoadBalancer Service instead.
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  labels:
+    app: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+        - name: api-gateway
+          image: payment-platform/api-gateway:1.0.0
+          imagePullPolicy: IfNotPresent   # use the locally-built image in Minikube/kind
+          ports:
+            - containerPort: 8080
+          # ── Health probes ──────────────────────────────────────────────────
+          # Kubernetes calls /actuator/health to decide if a pod is ready to
+          # receive traffic (readinessProbe) and still alive (livenessProbe).
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          # ── Resource limits ────────────────────────────────────────────────
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  labels:
+    app: api-gateway
+spec:
+  # NodePort exposes the gateway on every cluster node at port 30080,
+  # so you can reach it from your laptop: http://localhost:30080 (kind)
+  # or http://$(minikube ip):30080
+  type: NodePort
+  selector:
+    app: api-gateway
+  ports:
+    - port: 8080          # internal cluster port
+      targetPort: 8080    # container port
+      nodePort: 30080     # external port on each node

@@ -1,0 +1,3 @@
+com\platform\order\OrderServiceApplication.class
+com\platform\order\model\Order.class
+com\platform\order\controller\OrderController.class

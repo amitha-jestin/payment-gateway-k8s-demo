@@ -1,0 +1,16 @@
+server:
+  port: 8080   # All services use the same port inside their container.
+               # Port conflicts don't exist — each pod has its own network namespace.
+
+spring:
+  application:
+    name: user-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,71 @@
+# ============================================================================
+# user-service — Kubernetes Deployment + Service
+#
+# replicas: 3  ← demonstrates kube-proxy load balancing.
+# The "pod" field in API responses shows which replica handled each request.
+#
+# HOW DISCOVERY WORKS (no Eureka needed):
+#   1. This Deployment creates 3 pods, each labelled app=user-service.
+#   2. The Service below selects those pods via selector: app=user-service.
+#   3. CoreDNS registers the name "user-service" → ClusterIP of the Service.
+#   4. The gateway resolves http://user-service using this DNS entry.
+#   5. kube-proxy distributes requests across the 3 pods (round-robin IPTables rules).
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+spec:
+  replicas: 3   # ← 3 replicas — watch the "pod" field rotate across requests
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: payment-platform/user-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service   # ← this name is the DNS hostname used by the gateway
+  labels:
+    app: user-service
+spec:
+  type: ClusterIP      # internal-only; not reachable from outside the cluster
+  selector:
+    app: user-service  # routes traffic to pods with this label
+  ports:
+    - port: 80         # port the gateway calls:  http://user-service/users
+      targetPort: 8080 # port the container listens on
